@@ -1,0 +1,20 @@
+{
+  "n_rows": 2634,
+  "unreliable_rate": 0.20387243735763097,
+  "feature_columns": [
+    "step",
+    "corruption_level",
+    "confidence",
+    "prev_confidence",
+    "confidence_diff",
+    "confidence_pct_change",
+    "moving_avg_confidence",
+    "moving_std_confidence",
+    "rolling_std_confidence",
+    "confidence_range_so_far",
+    "rate_of_change",
+    "consecutive_decreases",
+    "prediction_margin",
+    "historical_accuracy_for_class"
+  ]
+}

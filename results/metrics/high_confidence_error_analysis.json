@@ -1,0 +1,52 @@
+{
+  "high_confidence_threshold": 0.75,
+  "n_high_confidence_predictions": 100,
+  "n_high_confidence_errors": 6,
+  "high_confidence_error_rate": 0.06,
+  "share_of_all_errors_that_are_high_confidence": 0.07228915662650602,
+  "n_docs_high_conf_start_but_wrong_after_corruption": 6,
+  "example_high_confidence_errors": [
+    {
+      "input_id": "doc_00750",
+      "confidence": 0.9631982763676868,
+      "predicted_class": 1,
+      "actual_class": 0,
+      "target_name": "alt.atheism"
+    },
+    {
+      "input_id": "doc_01141",
+      "confidence": 0.8607662082126865,
+      "predicted_class": 1,
+      "actual_class": 0,
+      "target_name": "alt.atheism"
+    },
+    {
+      "input_id": "doc_00568",
+      "confidence": 0.83076699347438,
+      "predicted_class": 1,
+      "actual_class": 0,
+      "target_name": "alt.atheism"
+    },
+    {
+      "input_id": "doc_00290",
+      "confidence": 0.7686349157475665,
+      "predicted_class": 1,
+      "actual_class": 0,
+      "target_name": "alt.atheism"
+    },
+    {
+      "input_id": "doc_01518",
+      "confidence": 0.7687294084830812,
+      "predicted_class": 1,
+      "actual_class": 0,
+      "target_name": "alt.atheism"
+    },
+    {
+      "input_id": "doc_00236",
+      "confidence": 0.9433839765336344,
+      "predicted_class": 1,
+      "actual_class": 0,
+      "target_name": "alt.atheism"
+    }
+  ]
+}

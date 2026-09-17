@@ -1,0 +1,10 @@
+{
+  "n_documents": 439,
+  "mean_confidence_start": 0.6634600651705093,
+  "mean_confidence_end": 0.6330773000083879,
+  "mean_total_drift": -0.03038276516212143,
+  "pct_documents_confidence_decreased": 0.7198177676537585,
+  "pct_documents_confidence_increased": 0.2733485193621868,
+  "pct_documents_confidence_unchanged": 0.00683371298405467,
+  "corr_drift_vs_became_incorrect": 0.042773039834583304
+}

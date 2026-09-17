@@ -1,0 +1,13 @@
+{
+  "categories": [
+    "alt.atheism",
+    "soc.religion.christian"
+  ],
+  "n_total": 1754,
+  "n_train": 1315,
+  "n_test": 439,
+  "class_balance_total": {
+    "1": 0.5558722919042189,
+    "0": 0.44412770809578106
+  }
+}

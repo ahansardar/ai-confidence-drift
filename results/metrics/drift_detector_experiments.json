@@ -1,0 +1,103 @@
+{
+  "A_no_confidence_features": {
+    "logistic_regression": {
+      "accuracy": 0.4984848484848485,
+      "precision": 0.1696969696969697,
+      "recall": 0.49557522123893805,
+      "f1": 0.2528216704288939,
+      "roc_auc": 0.5080082833152675,
+      "confusion_matrix": [
+        [
+          273,
+          274
+        ],
+        [
+          57,
+          56
+        ]
+      ],
+      "false_positive_rate": 0.5009140767824497,
+      "false_negative_rate": 0.504424778761062
+    }
+  },
+  "B_single_confidence_features": {
+    "logistic_regression": {
+      "accuracy": 0.6606060606060606,
+      "precision": 0.3079584775086505,
+      "recall": 0.7876106194690266,
+      "f1": 0.4427860696517413,
+      "roc_auc": 0.7406772257365194,
+      "confusion_matrix": [
+        [
+          347,
+          200
+        ],
+        [
+          24,
+          89
+        ]
+      ],
+      "false_positive_rate": 0.3656307129798903,
+      "false_negative_rate": 0.21238938053097345
+    }
+  },
+  "C_confidence_drift_features": {
+    "logistic_regression": {
+      "accuracy": 0.7045454545454546,
+      "precision": 0.3446969696969697,
+      "recall": 0.8053097345132744,
+      "f1": 0.4827586206896552,
+      "roc_auc": 0.7866560968112472,
+      "confusion_matrix": [
+        [
+          374,
+          173
+        ],
+        [
+          22,
+          91
+        ]
+      ],
+      "false_positive_rate": 0.3162705667276051,
+      "false_negative_rate": 0.19469026548672566
+    },
+    "random_forest": {
+      "accuracy": 0.7257575757575757,
+      "precision": 0.3521739130434783,
+      "recall": 0.7168141592920354,
+      "f1": 0.47230320699708456,
+      "roc_auc": 0.7517108605264435,
+      "confusion_matrix": [
+        [
+          398,
+          149
+        ],
+        [
+          32,
+          81
+        ]
+      ],
+      "false_positive_rate": 0.27239488117001825,
+      "false_negative_rate": 0.2831858407079646
+    },
+    "gradient_boosting": {
+      "accuracy": 0.7257575757575757,
+      "precision": 0.3508771929824561,
+      "recall": 0.7079646017699115,
+      "f1": 0.46920821114369504,
+      "roc_auc": 0.7600669783695458,
+      "confusion_matrix": [
+        [
+          399,
+          148
+        ],
+        [
+          33,
+          80
+        ]
+      ],
+      "false_positive_rate": 0.27056672760511885,
+      "false_negative_rate": 0.2920353982300885
+    }
+  }
+}
