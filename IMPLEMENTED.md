@@ -89,7 +89,7 @@ all the underlying deliverables the plan targets are complete (see above).
 | Confidence analysis | Done | `results/metrics/confidence_vs_accuracy.csv`, `confidence_trend_statistics.json` |
 | Calibration analysis | Done | `results/metrics/calibration_analysis.json` |
 | Research report | Done | `reports/RESEARCH_REPORT.md` |
-| Final presentation | Not started | — |
+| Final presentation | Done | `reports/presentation/AI_Confidence_Drift_Presentation.pptx` |
 
 ## 16. Research report structure (18 sections)
 All 18 sections present in `reports/RESEARCH_REPORT.md`, plus references.
@@ -97,9 +97,8 @@ All 18 sections present in `reports/RESEARCH_REPORT.md`, plus references.
 ## 17. Evaluation criteria alignment
 All graded categories (AI/ML fundamentals, research methodology, dataset &
 experimentation, feature engineering, ML implementation, evaluation &
-analysis, research documentation) have corresponding, verifiable artifacts
-in this repo as itemized above. Final presentation is the one outstanding
-item.
+analysis, research documentation, final presentation) have corresponding,
+verifiable artifacts in this repo as itemized above.
 
 ## 18. Important instructions compliance
 - Focused on AI/ML, not automation/chatbot/UI — confirmed, no web app or
@@ -112,6 +111,5 @@ item.
   correlation is weak, r≈0.04; detector F1 is modest at ≈0.48).
 
 ## Remaining / open items
-- Final presentation deck.
 - Optional: repeat the pipeline on a second base-model architecture (future
   scope item, report §17) to test generalization of the findings.

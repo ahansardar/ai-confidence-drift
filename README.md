@@ -9,8 +9,9 @@ AI model's confidence and use those changes to identify potentially
 unreliable predictions?*
 
 See [`reports/RESEARCH_REPORT.md`](reports/RESEARCH_REPORT.md) for the full
-research report and [`IMPLEMENTED.md`](IMPLEMENTED.md) for a section-by-section
-status against the project brief.
+research report, [`reports/presentation/AI_Confidence_Drift_Presentation.pptx`](reports/presentation/AI_Confidence_Drift_Presentation.pptx)
+for the final presentation, and [`IMPLEMENTED.md`](IMPLEMENTED.md) for a
+section-by-section status against the project brief.
 
 ## Approach
 
