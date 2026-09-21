@@ -34,28 +34,32 @@ section-by-section status against the project brief.
 6. Fit a separate conservative review policy using out-of-fold predictions on
    the base-model training corpus. It routes high-confidence predictions in
    error-prone predicted classes to human review.
+7. Train a sequence-level detector to judge the *original* prediction after
+   six probes. Its base-model training sequences are out of fold, and it can
+   score new documents without their labels.
 
 ## Project structure
 
 ```
 src/
-  config.py               shared paths/constants
-  data_prep.py             1. data collection
-  train_baseline.py        2. base classifier + its own metrics
-  drift_simulation.py      3. confidence-sequence generation
-  feature_engineering.py   4. drift feature engineering
-  confidence_analysis.py   5. confidence-vs-accuracy binning, trend stats
-  calibration.py           6. ECE / Brier score / reliability diagram
-  error_analysis.py        7. high-confidence-error analysis
-  high_confidence_review.py 8. training-only review-policy selection and evaluation
-  drift_detector.py         9. Experiments A/B/C, drift-detector training
-  visualize.py             10. report figures
-  run_pipeline.py          runs all of the above in order
-data/processed/            generated datasets (committed, reproducible)
-models/                    trained models (joblib) + high-confidence review policy (JSON)
-results/metrics/           every metric reported in the research report
-  results/figures/           reliability diagram, drift trajectories, etc.
-  reports/RESEARCH_REPORT.md full 18-section research report
+  config.py                  shared paths/constants
+  data_prep.py               1. data collection
+  train_baseline.py          2. base classifier + its own metrics
+  drift_simulation.py        3. confidence-sequence generation
+  feature_engineering.py     4. drift feature engineering
+  confidence_analysis.py     5. confidence-vs-accuracy binning, trend stats
+  calibration.py             6. ECE / Brier score / reliability diagram
+  error_analysis.py          7. high-confidence-error analysis
+  high_confidence_review.py  8. training-only review policy
+  drift_detector.py          9. Experiments A/B/C, per-step detector
+  sequence_error_detector.py 10. original-error detection after six probes
+  visualize.py              11. report figures
+  run_pipeline.py            runs all of the above in order
+data/processed/              generated datasets (committed, reproducible)
+models/                      trained models and review policy
+results/metrics/             metrics reported in the research report
+results/figures/             reliability diagram, drift trajectories, etc.
+reports/RESEARCH_REPORT.md   full research report
 ```
 
 `data/raw/` (the ~15 MB scikit-learn dataset cache) is not committed — it is
@@ -88,8 +92,18 @@ with `python -m unittest discover -s tests -v`.
   history features raises it to 0.508; ROC-AUC moves from 0.729 to 0.763 for
   B versus C. The separate holdout gain is smaller (F1 0.447 to 0.457).
 - Net drift correlates 0.090 with a correct prediction becoming incorrect and
-  0.266 with any incorrect final prediction. The drift detector caught none
-  of the six high-confidence errors at the uncorrupted step. The separate
-  training-derived review policy routed all six to review, but also routed
-  78 correct predictions (84 reviews among 100 high-confidence cases). It is
-  a costly coverage safeguard, not an accurate error classifier.
+  0.266 with any incorrect final prediction. The original per-step detector
+  caught none of the six high-confidence errors at step 0, when no history
+  exists. The new sequence-level detector flagged 6/6 after six probes and
+  flagged 50 correct predictions among the 100 high-confidence cases. Its
+  start-only ablation flagged 5/6 with 43 false alarms. The separate immediate
+  review policy also covers 6/6, but sends 78 correct predictions to review.
+
+`score_documents` in `src/sequence_error_detector.py` accepts a dataframe
+with `input_id` and `text` and returns the
+original prediction, confidence, error-risk score, and review flag. The saved
+bundle is `models/drift_detector_best.joblib` (also saved as
+`models/sequence_error_detector.joblib`). The earlier per-step model is kept
+as `models/drift_detector_per_step.joblib` for the A/B/C experiment. The
+primary detector runs six perturbed
+inferences per document before returning a flag, so it is not a step-0 alert.

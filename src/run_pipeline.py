@@ -9,6 +9,7 @@ import drift_simulation
 import error_analysis
 import feature_engineering
 import high_confidence_review
+import sequence_error_detector
 import train_baseline
 import visualize
 
@@ -22,7 +23,8 @@ STEPS = [
     ("7. High-confidence error analysis", error_analysis.main),
     ("8. High-confidence review policy", high_confidence_review.main),
     ("9. Confidence-drift detector experiments", drift_detector.main),
-    ("10. Generate figures", visualize.main),
+    ("10. Sequence-level original-error detector", sequence_error_detector.main),
+    ("11. Generate figures", visualize.main),
 ]
 
 

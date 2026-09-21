@@ -44,6 +44,8 @@ nine history features use the same document splits. Logistic Regression is
 the controlled A/B/C comparison; Random Forest and Gradient Boosting are
 also evaluated on C. The saved algorithm is chosen in grouped folds of the
 training documents only (`results/metrics/algorithm_selection.json`).
+The separate sequence-level model predicts whether the original prediction
+was incorrect after six probes (`src/sequence_error_detector.py`).
 
 ## 8. Feature engineering
 Done. C uses 13 inputs: two context, two current-confidence and nine history
@@ -59,10 +61,11 @@ Done. `src/error_analysis.py` and report §15 show that 6/100 (6.0%) of
 high-confidence (≥0.75) predictions were incorrect. The detector's five-fold
 out-of-fold check caught 0/6 at the uncorrupted step. This failure is
 reported in `results/metrics/high_confidence_detector_analysis.json`. A
-separate training-derived review policy routed all 6/6 to review, along with
-78 correct predictions (`results/metrics/high_confidence_review_analysis.json`).
-It is a conservative safeguard with a high review cost, not an improved
-classification result.
+new sequence-level detector flags 6/6 after six probes, with 50 correct
+predictions flagged (`results/metrics/sequence_error_detector_analysis.json`).
+It predicts original-step correctness from a completed confidence sequence.
+The separate immediate review policy also covers 6/6 but routes 78 correct
+predictions (`results/metrics/high_confidence_review_analysis.json`).
 
 ## 11. Calibration analysis
 Done. ECE 0.153, corrected binary Brier score 0.160 and a reliability
@@ -73,7 +76,9 @@ Done. Base model: accuracy/precision/recall/F1/ROC-AUC/confusion matrix in
 `results/metrics/baseline_model_metrics.json`. Drift detector: same metrics
 plus FPR/FNR per experiment in
 `results/metrics/drift_detector_experiments.json`. Kept explicitly separate
-per the brief's requirement (report §9, §15).
+per the brief's requirement (report §9, §15). The sequence-level model's
+high-confidence recall, false alarms, ROC-AUC, and start-only ablation are in
+`results/metrics/sequence_error_detector_analysis.json`.
 
 ## 13. Experimental comparison (A/B/C)
 Done. `src/drift_detector.py` and report §13 show the incremental results.
@@ -93,7 +98,7 @@ day-by-day timeline. The underlying deliverables are listed below.
 | Python source code | Done | `src/` |
 | GitHub repository | Done | this repo (public) |
 | Dataset / dataset source | Done | `data/processed/` + `sklearn.datasets.fetch_20newsgroups` |
-| Trained ML model | Done | `models/baseline_model.joblib`, `models/drift_detector_best.joblib` |
+| Trained ML model | Done | `models/baseline_model.joblib`, primary `models/drift_detector_best.joblib`, research baseline `models/drift_detector_per_step.joblib` |
 | High-confidence review policy | Done | `models/high_confidence_review_policy.json`, `src/high_confidence_review.py` |
 | Feature-engineering methodology | Done | `src/feature_engineering.py`, report §10 |
 | Experimental results | Done | `results/metrics/` |
@@ -119,11 +124,11 @@ verifiable artifacts in this repo as itemized above.
 - No fabricated datasets, results, or accuracy: reported numbers come from
   `src/run_pipeline.py` and fixed random seeds.
 - Weak and unsuccessful findings are documented: drift-history improvement is
-  modest, holdout performance varies, and the detector caught none of the
-  six high-confidence errors. The separate review safeguard catches them in
-  this dataset at the cost of 78 false alarms.
+  modest and holdout performance varies. The per-step detector caught none
+  of the six high-confidence errors at step 0. The sequence-level detector
+  flags all six only after six probes and flags 50 correct cases too.
 
 ## Remaining / open items
 - Further research: repeat the pipeline on another dataset or base model to
-  test generalization. Improve *selective* detection of high-confidence errors
-  at step 0 so fewer correct predictions require review.
+  test generalization. Reduce the sequence-level detector's false alarms and
+  establish whether it works on naturally repeated predictions.

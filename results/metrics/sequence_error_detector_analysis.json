@@ -1,0 +1,106 @@
+{
+  "method": "OOF base-model sequences on training documents; six probes per document; Logistic Regression predicts original-step error",
+  "threshold_method": "75% of the lowest high-confidence-error risk in five meta-model training folds; zero if none observed",
+  "threshold": 0.04327614915597475,
+  "training_high_confidence_errors": 6,
+  "training_at_threshold": {
+    "n_high_confidence_predictions": 248,
+    "n_high_confidence_errors": 6,
+    "n_errors_caught": 6,
+    "n_correct_flagged": 140,
+    "n_total_flagged": 146,
+    "error_recall": 1.0,
+    "alert_precision": 0.0410958904109589,
+    "roc_auc": 0.7692837465564738
+  },
+  "nested_training_validation": {
+    "method": "five outer folds; base and detector models and threshold trained without each outer validation document",
+    "totals": {
+      "n_high_confidence_predictions": 248,
+      "n_high_confidence_errors": 6,
+      "n_errors_caught": 6,
+      "n_correct_flagged": 171,
+      "n_total_flagged": 177
+    },
+    "folds": [
+      {
+        "threshold": 0.017721939503806218,
+        "n_high_confidence_predictions": 48,
+        "n_high_confidence_errors": 3,
+        "n_errors_caught": 3,
+        "n_correct_flagged": 25,
+        "n_total_flagged": 28,
+        "error_recall": 1.0,
+        "alert_precision": 0.10714285714285714,
+        "roc_auc": 0.9481481481481482
+      },
+      {
+        "threshold": 0.02130711911090892,
+        "n_high_confidence_predictions": 52,
+        "n_high_confidence_errors": 0,
+        "n_errors_caught": 0,
+        "n_correct_flagged": 38,
+        "n_total_flagged": 38,
+        "error_recall": null,
+        "alert_precision": 0.0,
+        "roc_auc": null
+      },
+      {
+        "threshold": 0.03925890414887051,
+        "n_high_confidence_predictions": 55,
+        "n_high_confidence_errors": 1,
+        "n_errors_caught": 1,
+        "n_correct_flagged": 27,
+        "n_total_flagged": 28,
+        "error_recall": 1.0,
+        "alert_precision": 0.03571428571428571,
+        "roc_auc": 0.7037037037037037
+      },
+      {
+        "threshold": 0.0,
+        "n_high_confidence_predictions": 59,
+        "n_high_confidence_errors": 2,
+        "n_errors_caught": 2,
+        "n_correct_flagged": 57,
+        "n_total_flagged": 59,
+        "error_recall": 1.0,
+        "alert_precision": 0.03389830508474576,
+        "roc_auc": 0.6491228070175439
+      },
+      {
+        "threshold": 0.032560136790687304,
+        "n_high_confidence_predictions": 34,
+        "n_high_confidence_errors": 0,
+        "n_errors_caught": 0,
+        "n_correct_flagged": 24,
+        "n_total_flagged": 24,
+        "error_recall": null,
+        "alert_precision": 0.0,
+        "roc_auc": null
+      }
+    ]
+  },
+  "base_test_set_evaluation": {
+    "n_high_confidence_predictions": 100,
+    "n_high_confidence_errors": 6,
+    "n_errors_caught": 6,
+    "n_correct_flagged": 50,
+    "n_total_flagged": 56,
+    "error_recall": 1.0,
+    "alert_precision": 0.10714285714285714,
+    "roc_auc": 0.7943262411347518,
+    "all_document_roc_auc": 0.7788344388791121,
+    "all_document_f1_at_0_5": 0.4661016949152542
+  },
+  "start_only_ablation": {
+    "n_high_confidence_predictions": 100,
+    "n_high_confidence_errors": 6,
+    "n_errors_caught": 5,
+    "n_correct_flagged": 43,
+    "n_total_flagged": 48,
+    "error_recall": 0.8333333333333334,
+    "alert_precision": 0.10416666666666667,
+    "roc_auc": 0.7801418439716312
+  },
+  "evaluation_limit": "developed after inspecting the six test errors; the same corpus cannot establish prospective performance"
+}

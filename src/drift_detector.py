@@ -227,7 +227,7 @@ def main():
     best_bundle = c_bundles[selected_algorithm]
     best_bundle["evaluation_split"] = "GroupShuffleSplit(test_size=0.25, random_state=42)"
     best_bundle["selection_method"] = algorithm_selection["method"]
-    joblib.dump(best_bundle, MODELS / "drift_detector_best.joblib")
+    joblib.dump(best_bundle, MODELS / "drift_detector_per_step.joblib")
 
     a = results["A_no_confidence_features"]["logistic_regression"]
     b = results["B_single_confidence_features"]["logistic_regression"]

@@ -3,6 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -13,6 +14,8 @@ from confidence_analysis import trend_statistics
 from drift_detector import EXPERIMENTS, add_training_only_class_accuracy
 from feature_engineering import build_features
 from high_confidence_review import policy_from_predictions, review_flags, evaluate_flags
+from sequence_error_detector import score_documents
+from config import DATA_PROCESSED, MODELS
 
 
 class MethodologyTests(unittest.TestCase):
@@ -81,6 +84,17 @@ class MethodologyTests(unittest.TestCase):
             actual=[0, 1], predicted=[0, 1], confidence=[0.9, 0.9],
         )
         self.assertEqual(policy["review_predicted_classes"], [0, 1])
+
+    def test_sequence_detector_scores_unlabeled_documents(self):
+        documents = pd.read_csv(DATA_PROCESSED / "test.csv").head(3)
+        base = joblib.load(MODELS / "baseline_model.joblib")
+        detector = joblib.load(MODELS / "drift_detector_best.joblib")
+        self.assertEqual(detector["target"], "original step-0 prediction incorrect after six probes")
+        scored = score_documents(base, detector, documents[["input_id", "text"]])
+        self.assertEqual(len(scored), 3)
+        self.assertEqual(scored["input_id"].tolist(), documents["input_id"].tolist())
+        self.assertTrue(scored["original_error_risk"].between(0, 1).all())
+        self.assertEqual(scored["flagged"].dtype, bool)
 
 
 if __name__ == "__main__":
