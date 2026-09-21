@@ -1,6 +1,6 @@
 {
   "expected_calibration_error": 0.1529313415735695,
-  "brier_score": 0.12513908135590102,
+  "brier_score": 0.16004282968222097,
   "n_bins": 10,
   "bins": [
     {

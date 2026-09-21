@@ -14,7 +14,6 @@
     "confidence_range_so_far",
     "rate_of_change",
     "consecutive_decreases",
-    "prediction_margin",
-    "historical_accuracy_for_class"
+    "prediction_margin"
   ]
 }

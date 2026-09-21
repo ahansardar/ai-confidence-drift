@@ -60,7 +60,7 @@ def plot_experiment_comparison():
     ax.set_xticks(list(x))
     ax.set_xticklabels(labels, fontsize=8)
     ax.set_ylim(0, 1)
-    ax.set_title("Experiment A/B/C: Confidence-Drift Detector Comparison")
+    ax.set_title("Detector comparison on the 110-document holdout")
     ax.legend()
     fig.tight_layout()
     fig.savefig(FIGURES / "experiment_comparison.png", dpi=150)

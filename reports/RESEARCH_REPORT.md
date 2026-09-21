@@ -12,9 +12,9 @@ AI models usually give a confidence score along with their prediction, but that 
 
 I trained a simple text classifier (TF-IDF + Logistic Regression) on a public two class newsgroup dataset. To actually get a "series" of confidence values for each sample, I fed every test document to the model multiple times, each time with a bit more of the text corrupted. This gave me real confidence sequences, not made up numbers. From these sequences I built statistical features (moving average, volatility, how many times confidence dropped in a row, and so on) and used them to train a second model whose job is to guess if a prediction is unreliable.
 
-The results were mixed in an interesting way. Just looking at how much a prediction's confidence changed overall was a weak signal (correlation of about 0.04 with the prediction ending up wrong). But when I used the full set of drift features, the detector got noticeably better at flagging unreliable predictions: F1 went from 0.25 with no confidence information at all, up to 0.48 with the full feature set, and ROC-AUC went from 0.51 to 0.79. I also checked calibration and found the base model is only okay, not great (ECE of 0.153), and 6% of its high confidence predictions (above 75%) were still wrong, including one case where the model was 96% confident and completely wrong.
+The results were mixed. On the 439 documents, net confidence change had a correlation of 0.090 with a correct prediction becoming incorrect. In five-fold document-grouped evaluation, adding confidence at the current step raised unreliable-prediction F1 from 0.296 to 0.468. Adding the nine history features raised it further to 0.508; ROC-AUC rose from 0.729 to 0.763 over the current-confidence model. The gain from history was modest but positive in this experiment. The base model's expected calibration error was 0.153 and its binary Brier score was 0.160. Six of 100 high-confidence predictions were wrong.
 
-So overall, confidence drift does carry useful information, but only if you look at the shape of the sequence rather than just the total change from start to end.
+The detector did not flag any of those six high-confidence errors in the out-of-fold evaluation. It should not be used to screen that particular failure mode without more work.
 
 ## 2. Introduction
 
@@ -39,7 +39,7 @@ I also wanted to answer a few smaller questions along the way:
 
 My hypothesis (H1) was that statistical features built from a confidence sequence, things like moving average, volatility, and consecutive drops, would predict unreliable predictions better than the raw confidence value alone, and much better than not using confidence at all.
 
-I tested this instead of just assuming it. As it turns out, part of the hypothesis holds and part of it doesn't, which I explain in section 14.
+The experiments below separate the gain from current confidence from the smaller gain from confidence history.
 
 ## 6. Related Work
 
@@ -80,11 +80,11 @@ Covered in section 10 below.
 
 ### 8.4 Confidence drift detector
 
-I trained a second, separate classifier to predict a binary target I call `unreliable` (1 if the prediction was wrong, 0 if it was correct), using only the engineered features. I compared three different feature sets (Experiments A, B, and C, explained in section 13) and three algorithms: Logistic Regression, Random Forest, and Gradient Boosting.
+I trained a second classifier to predict `unreliable` (1 for an incorrect prediction). Experiments A, B, and C add feature families in sequence: input-corruption context, current confidence, and then confidence history. Logistic Regression is the primary comparison model. I also evaluated Random Forest and Gradient Boosting on C.
 
 ### 8.5 Train/test split
 
-I split the data at the document level using `GroupShuffleSplit` (75/25), so that different corruption steps from the same document never end up on both sides of the split. If I hadn't done this, the detector could basically cheat by seeing a slightly less corrupted version of the same document in training and the test version in testing.
+I split the data at the document level using `GroupShuffleSplit` (75/25), so that different corruption steps from the same document never appear in both training and test data. I used that holdout split for model details and a separate five-fold `GroupKFold` evaluation for the main A/B/C comparison. Each row receives one out-of-fold prediction. The saved model's algorithm was selected using three grouped folds inside the training portion of the holdout split; the holdout labels did not choose it.
 
 ## 9. ML Model
 
@@ -97,7 +97,7 @@ The `unreliable` target is imbalanced (only about 21% of predictions are actuall
 
 ## 10. Feature Engineering
 
-I didn't just throw every possible feature at the model. I picked features that only use information available up to the current step, nothing from future steps and nothing from the true label, since that would be cheating.
+The primary C model uses 13 inputs: two context features, two current-confidence features, and nine history features. Every primary input is available by the current prediction step. Ground truth is kept only as the training target and for evaluation.
 
 | Feature | What it means |
 |---|---|
@@ -112,10 +112,9 @@ I didn't just throw every possible feature at the model. I picked features that 
 | `rate_of_change` | change in confidence divided by the step number |
 | `consecutive_decreases` | how many steps in a row confidence has been dropping |
 | `prediction_margin` | how far apart the two class probabilities are |
-| `historical_accuracy_for_class` | how accurate the model has historically been for this predicted class |
 | `step`, `corruption_level` | where we are in the sequence |
 
-I didn't just assume these were all useful, that's exactly what Experiments A, B, and C in section 13 are for.
+I tested the feature groups by removing change features, moving statistics, and consecutive drops in turn. I also tested a class-level historical accuracy feature separately. That optional statistic uses labels from training documents only, after the document split; it never enters the primary C comparison. In this binary task, `prediction_margin` is a deterministic transform of confidence, so it does not add independent information. See section 13 for the ablation results.
 
 ## 11. Confidence vs Actual Correctness
 
@@ -134,16 +133,16 @@ No predictions fall below 50%, because in a two class softmax, the winning class
 **Trend across the 439 six step sequences:**
 - Average confidence started at 0.663 and ended at 0.633.
 - 72.0% of documents showed an overall drop in confidence as corruption increased. 27.3% actually went up (sometimes removing words makes a text look more clearly like one class, oddly enough). The rest stayed about the same.
-- Correlation between "total confidence drift" and "the prediction ended up wrong at the last step" was only 0.043. That's very weak.
+- Of 439 documents, 25 moved from correct at the start to incorrect at the final step. Net confidence change had a correlation of 0.090 with that transition. Its correlation with *any* incorrect final prediction (95 documents, including those wrong at the start) was 0.266. These are different outcomes and must not be conflated.
 
-This last point matters a lot. The brief specifically warns not to assume a falling confidence trend means the model is getting less accurate, and I actually tested that assumption instead of taking it for granted. It turned out the assumption was basically wrong, at least for net drift on its own.
+The sign is also informative: a simple rule that treats every decrease as a warning would not describe these data well. The sequence's overall change is a weak signal for a correct prediction becoming wrong, while the final-error outcome has a larger association. Neither correlation establishes a useful decision threshold on its own.
 
 ## 12. Calibration Analysis
 
 I calculated this on the step 0 (uncorrupted) test predictions.
 
 - **Expected Calibration Error (ECE): 0.153**
-- **Brier score: 0.125**
+- **Binary Brier score: 0.160**, calculated from the probability of class 1 and the observed 0/1 label
 
 | Confidence bin | n | Average confidence | Average accuracy |
 |---|---|---|---|
@@ -157,27 +156,29 @@ The reliability diagram is saved at `results/figures/reliability_diagram.png`. W
 
 ## 13. Experiments
 
-I ran a controlled comparison using the same train/test split every time (1,974 training rows from 329 documents, 660 test rows from 110 documents). The goal in every experiment is the same: predict whether a prediction is unreliable.
+Each experiment predicts whether the same base-model prediction is incorrect. A uses `step` and `corruption_level`; B adds current confidence and margin; C adds nine history features to B. The primary comparison uses pooled out-of-fold predictions from five document-grouped folds across all 2,634 rows. No document crosses a fold boundary. Logistic Regression and the 0.5 decision threshold are the same for A, B, and C.
 
-| Experiment | Features used | Algorithm | Accuracy | F1 | ROC-AUC |
-|---|---|---|---|---|---|
-| A: no confidence features | just `step` and `corruption_level` | Logistic Regression | 0.498 | 0.253 | 0.508 |
-| B: single point confidence | `confidence`, `prediction_margin` | Logistic Regression | 0.661 | 0.443 | 0.741 |
-| C: full confidence drift features | all 13 engineered features | Logistic Regression | 0.705 | **0.483** | **0.787** |
-| C: full confidence drift features | all 13 engineered features | Random Forest | 0.726 | 0.472 | 0.752 |
-| C: full confidence drift features | all 13 engineered features | Gradient Boosting | 0.726 | 0.471 | 0.762 |
+| Experiment | Added information | Accuracy | F1 | ROC-AUC |
+|---|---|---|---|---|
+| A: context only | corruption step and level | 0.504 | 0.296 | 0.509 |
+| B: current confidence | confidence and margin, in addition to A | 0.637 | 0.468 | 0.729 |
+| C: confidence history | nine drift features, in addition to B | 0.688 | **0.508** | **0.763** |
 
-Full numbers, including confusion matrices and false positive/negative rates, are saved in `results/metrics/drift_detector_experiments.json`.
+The C-minus-B gain was 0.040 in F1 and 0.034 in ROC-AUC. A paired bootstrap of 1,000 document resamples gave intervals of 0.018 to 0.065 for F1 and 0.014 to 0.053 for ROC-AUC. Those intervals treat the trained fold models as fixed; they do not include variation from retraining or a new dataset. The five fold scores and pooled metrics are in `results/metrics/drift_history_validation.json`.
 
-What this tells me is that confidence drift features genuinely help. Going from experiment A to experiment C, F1 improved by 0.230 and ROC-AUC improved by 0.279. That's a real, measured improvement, not something I'm assuming. That said, I want to be honest that F1 of 0.48 still isn't great in absolute terms, this isn't a solved problem, it's a meaningful step forward.
+On the separate 110-document holdout, Logistic Regression scored F1 0.253 / 0.447 / 0.457 and ROC-AUC 0.508 / 0.741 / 0.764 for A / B / C. This single split shows a smaller C-minus-B gain than the pooled five-fold result. Random Forest and Gradient Boosting on C reached holdout F1 0.472 and 0.464, respectively. Three-fold grouped cross-validation on the training documents chose Logistic Regression as the saved model. The full confusion matrices and error rates are in `results/metrics/drift_detector_experiments.json`; model selection is in `results/metrics/algorithm_selection.json`.
+
+`results/figures/experiment_comparison.png` plots this holdout comparison; its bars are not the pooled five-fold scores in the table above.
+
+Removing the moving-statistics group from C lowered holdout ROC-AUC from 0.764 to 0.751. Removing the change group gave 0.763, and removing consecutive drops gave 0.764. These group ablations suggest that moving statistics contributed the clearest incremental signal on this split. A class-accuracy prior computed only from training documents raised holdout F1 to 0.483 and ROC-AUC to 0.787, but it is a separate class prior, not evidence about drift history. Full results are in `results/metrics/feature_ablation.json`.
 
 ## 14. Results
 
 - The base classifier does its actual job well: 81.1% accuracy and 0.892 ROC-AUC on held out data (full breakdown in section 15).
 - Confidence is informative on average (section 11), but it's not perfectly calibrated (section 12).
-- Net confidence drift alone is a poor predictor of whether a prediction ends up wrong (correlation of just 0.043). This means my original hypothesis, in its simple form, doesn't really hold.
-- However, the shape of the confidence sequence, things like volatility, moving average, and consecutive drops, does carry real predictive signal. So a more precise version of my hypothesis does hold: it's not about how much confidence changed overall, it's about the pattern of how it changed.
-- 6.0% of high confidence (75% or above) predictions were wrong, and those account for 7.2% of all the errors I saw.
+- Net drift alone correlates 0.090 with a correct prediction becoming wrong. It correlates 0.266 with a wrong prediction at the final step, a broader outcome.
+- With context and current confidence held constant, nine history features improved pooled out-of-fold F1 from 0.468 to 0.508. The fixed holdout gain was smaller, from 0.447 to 0.457.
+- Six of 100 high-confidence predictions were wrong, accounting for 7.2% of the uncorrupted base model's errors. The detector missed all six in the out-of-fold check.
 
 ## 15. Error Analysis
 
@@ -195,7 +196,7 @@ What this tells me is that confidence drift features genuinely help. Going from 
 - 100 out of 439 step 0 predictions (22.8%) were high confidence.
 - 6 of those 100 (6.0%) were wrong. One example: the model was 96.3% confident and still got it wrong.
 - Interestingly, all 6 high confidence errors went the same direction: the true label was `alt.atheism` but the model predicted `soc.religion.christian`. My guess is that this happens because a lot of atheism related posts quote or reference Christian scripture and terminology while arguing against it, and a TF-IDF plus bigram model can't really tell the difference between someone quoting scripture to argue against it and someone writing as a believer. This is a reasonable explanation based on what I can see in the data, but I haven't proven it's the actual cause.
-- These are exactly the kind of cases my drift detector is meant to catch. The detector gets a ROC-AUC of 0.79 overall at flagging unreliable predictions, but that doesn't mean it catches every single high confidence error specifically. I want to be upfront that this is a real limitation, not something I'm claiming to have fully solved.
+- I tested detection directly. Across five document-grouped folds, every uncorrupted prediction received an out-of-fold C-model result. Among the 100 high-confidence predictions, six were wrong; the detector flagged none of those six and raised no false alarms in this subset at its 0.5 threshold (`results/metrics/high_confidence_detector_analysis.json`). At step 0, history features have not yet accumulated. These six cases are too few for a precise recall estimate, but the observed miss is a clear failure for the motivating use case.
 
 ## 16. Limitations
 
@@ -203,8 +204,9 @@ What this tells me is that confidence drift features genuinely help. Going from 
 - **The dataset is fairly small.** 439 test documents (2,634 total sequence rows) isn't huge, and some of my bins, like the 0.9 to 1.0 calibration bin with only 10 samples, are too small to draw strong conclusions from on their own.
 - **Only two classes.** I don't know if these results carry over to multi class problems.
 - **Only one type of base model.** I only tested TF-IDF plus Logistic Regression. Other model types, especially deep neural networks, tend to be overconfident in different ways, so the calibration story could look different there.
-- **The detector's performance is still modest.** An F1 of about 0.48 for the best confidence drift detector means it still misses a lot of unreliable predictions, or flags some reliable ones incorrectly. This is a real result and an improvement, but not a finished solution.
+- **The detector's performance is still modest.** Pooled out-of-fold F1 was 0.508 for C, and the separate holdout F1 was 0.457 for Logistic Regression. The model missed all six high-confidence errors at the uncorrupted step.
 - **The document level split reduces training data for the detector on purpose.** I used 1,974 rows from 329 documents rather than all 2,634 rows, to avoid leaking information across the split. This is the correct thing to do, but it does mean the detector has less to learn from.
+- **The evidence comes from one base model and one dataset.** The bootstrap intervals measure variation from sampling these documents with the fold models fixed. A new corpus or retrained base model could change the size or direction of the history-feature gain.
 
 ## 17. Future Scope
 
@@ -212,12 +214,13 @@ What this tells me is that confidence drift features genuinely help. Going from 
 - If I ever get access to genuinely repeated real world queries (the same input asked multiple times over time) instead of synthetic corruption, I'd like to try this on that kind of data.
 - Try calibration techniques like temperature scaling or Platt scaling on the base model, and check whether that changes how much value the drift features add.
 - Extend this to multi class classification, where confidence and margin features would be richer (for example, using entropy over the full probability distribution instead of just the top class).
+- Study a detector aimed specifically at step-0 high-confidence errors. The present drift features have no history at step 0, and the current model did not catch those six cases.
 
 ## 18. Conclusion
 
-Confidence, on average, does line up with correctness in this project, accuracy rose from about 63% to about 93% as I moved across confidence bins. But it's not fully calibrated (ECE of 0.153), and it's not something you can trust blindly either, 6% of high confidence predictions were still wrong. The raw amount that confidence changed across a sequence was a weak predictor of error on its own (correlation around 0.04). But a model trained on the shape of the confidence sequence, its volatility, its moving statistics, its consecutive drops, did give a real and measurable improvement at flagging unreliable predictions, taking F1 from 0.25 up to 0.48 and ROC-AUC from 0.51 up to 0.79.
+Confidence generally tracked correctness in this dataset: accuracy rose from 63.5% in the 40-60% confidence bin to 93.3% in the 80-100% bin. Calibration was imperfect (ECE 0.153; binary Brier score 0.160), and six high-confidence predictions were wrong. Net confidence change had little association with a correct prediction becoming incorrect (r = 0.090), though its association with any incorrect final prediction was larger (r = 0.266).
 
-So my answer to the research question is yes, but with an important condition that I tested rather than assumed: confidence drift is useful when you look at its statistical shape, not just at whether it went up or down overall. And even the best version of my detector here still leaves real room to improve, which I think is an honest place to end this project.
+The matched experiments show that confidence history adds a modest signal beyond current confidence on these corrupted-text sequences. Five-fold pooled F1 rose from 0.468 to 0.508 and ROC-AUC from 0.729 to 0.763. The separate holdout gain was smaller. The detector missed all six high-confidence errors at the uncorrupted step, so it does not yet solve the most concerning error case. That is the practical boundary of this result.
 
 ## 19. References
 

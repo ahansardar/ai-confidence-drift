@@ -1,7 +1,9 @@
 {
-  "baseline_A_f1": 0.2528216704288939,
-  "best_C_algorithm": "logistic_regression",
-  "best_C_f1": 0.4827586206896552,
-  "f1_improvement_over_baseline": 0.22993695026076127,
-  "roc_auc_improvement_over_baseline": 0.27864781349597967
+  "comparison": "same task and document split; B adds only current confidence to A; C adds only history to B",
+  "best_C_algorithm_by_holdout_f1": "random_forest",
+  "saved_model_algorithm_selected_on_training": "logistic_regression",
+  "A_to_B_f1_delta": 0.19382845364058499,
+  "B_to_C_f1_delta": 0.010650151412614772,
+  "A_to_B_roc_auc_delta": 0.23257187232046084,
+  "B_to_C_roc_auc_delta": 0.023830709744220302
 }

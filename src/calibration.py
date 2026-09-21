@@ -18,6 +18,11 @@ from config import DATA_PROCESSED, FIGURES, METRICS
 N_BINS = 10
 
 
+def binary_brier_score(step0: pd.DataFrame) -> float:
+    """Score class-1 probabilities against observed binary class labels."""
+    return float(brier_score_loss(step0["actual_class"], step0["proba_class1"]))
+
+
 def expected_calibration_error(confidences: np.ndarray, correct: np.ndarray, n_bins: int = N_BINS):
     bin_edges = np.linspace(0.0, 1.0, n_bins + 1)
     ece = 0.0
@@ -64,10 +69,10 @@ def main():
     confidences = step0["confidence"].values
     correct = step0["correct"].astype(int).values
 
-    # Brier score needs the probability assigned to the actual class, not
-    # just the max-class confidence.
-    proba_actual = np.where(step0["actual_class"] == 0, step0["proba_class0"], step0["proba_class1"])
-    brier = brier_score_loss((step0["actual_class"] == step0["predicted_class"]).astype(int), proba_actual)
+    # Binary Brier score compares the probability of class 1 with the actual
+    # class 0/1. Pairing correctness with the probability of the actual class
+    # understates the penalty for incorrect, confident predictions.
+    brier = binary_brier_score(step0)
 
     ece, bin_records = expected_calibration_error(confidences, correct)
     plot_reliability_diagram(bin_records, FIGURES / "reliability_diagram.png")

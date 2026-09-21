@@ -1,0 +1,30 @@
+{
+  "method": "three-fold document-grouped cross-validation on the training documents only",
+  "selected_algorithm": "logistic_regression",
+  "algorithms": {
+    "logistic_regression": {
+      "fold_f1": [
+        0.5524296675191815,
+        0.4232558139534884,
+        0.5770065075921909
+      ],
+      "mean_f1": 0.5175639963549535
+    },
+    "random_forest": {
+      "fold_f1": [
+        0.509090909090909,
+        0.43967828418230565,
+        0.5610859728506787
+      ],
+      "mean_f1": 0.5032850553746312
+    },
+    "gradient_boosting": {
+      "fold_f1": [
+        0.432258064516129,
+        0.42105263157894735,
+        0.5287356321839081
+      ],
+      "mean_f1": 0.4606821094263281
+    }
+  }
+}

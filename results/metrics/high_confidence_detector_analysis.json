@@ -1,0 +1,9 @@
+{
+  "evaluation": "five-fold document-grouped out-of-fold predictions on uncorrupted inputs",
+  "threshold": 0.75,
+  "n_predictions": 100,
+  "n_errors": 6,
+  "n_errors_caught": 0,
+  "n_false_alarms": 0,
+  "n_total_flagged": 0
+}

@@ -2,10 +2,10 @@
 Step 4: Engineer statistical features from confidence sequences (sections 6
 and 8 of the brief).
 
-Every feature is derived only from information available up to and including
-the current step (no leakage from future steps or from the true label), since
-the whole point of the detector is to flag unreliable predictions using only
-what the model itself exposes at inference time.
+Every model input here uses information available by the current step. Ground
+truth is retained only to construct the target and evaluate the detector.
+Class-level accuracy, which needs ground truth, is investigated separately in
+drift_detector.py after the document-level train/test split.
 """
 import json
 
@@ -17,22 +17,8 @@ from config import DATA_PROCESSED
 ROLLING_WINDOW = 3
 
 
-def historical_accuracy_by_class(train_seq_step0: pd.DataFrame) -> dict:
-    """Global accuracy of the base model per predicted class, measured on the
-    step-0 (uncorrupted) test predictions - a static, non-leaking feature
-    each row can be joined against on its own predicted_class."""
-    return (
-        train_seq_step0.groupby("predicted_class")["correct"]
-        .mean()
-        .to_dict()
-    )
-
-
 def build_features(seq_df: pd.DataFrame) -> pd.DataFrame:
     seq_df = seq_df.sort_values(["input_id", "step"]).reset_index(drop=True)
-
-    step0 = seq_df[seq_df["step"] == 0]
-    hist_acc = historical_accuracy_by_class(step0)
 
     rows = []
     for input_id, group in seq_df.groupby("input_id"):
@@ -73,7 +59,6 @@ def build_features(seq_df: pd.DataFrame) -> pd.DataFrame:
                 "rate_of_change": diff / max(row["step"], 1),
                 "consecutive_decreases": consecutive_decreases,
                 "prediction_margin": margins[i],
-                "historical_accuracy_for_class": hist_acc.get(row["predicted_class"], 0.5),
                 "predicted_class": int(row["predicted_class"]),
                 "actual_class": int(row["actual_class"]),
                 "correct": bool(row["correct"]),

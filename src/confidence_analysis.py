@@ -28,21 +28,29 @@ def confidence_vs_accuracy(step0: pd.DataFrame) -> pd.DataFrame:
 
 
 def trend_statistics(seq_df: pd.DataFrame) -> dict:
-    per_doc = seq_df.sort_values(["input_id", "step"]).groupby("input_id")["confidence"]
+    per_doc = seq_df.sort_values(["input_id", "step"]).groupby("input_id")
     first = per_doc.first()
     last = per_doc.last()
-    delta = last - first
+    start_confidence = first["confidence"]
+    end_confidence = last["confidence"]
+    started_correct = first["correct"].astype(bool)
+    ended_correct = last["correct"].astype(bool)
+    delta = end_confidence - start_confidence
     return {
         "n_documents": int(delta.shape[0]),
-        "mean_confidence_start": float(first.mean()),
-        "mean_confidence_end": float(last.mean()),
+        "mean_confidence_start": float(start_confidence.mean()),
+        "mean_confidence_end": float(end_confidence.mean()),
         "mean_total_drift": float(delta.mean()),
         "pct_documents_confidence_decreased": float((delta < 0).mean()),
         "pct_documents_confidence_increased": float((delta > 0).mean()),
         "pct_documents_confidence_unchanged": float((delta == 0).mean()),
+        "n_became_incorrect": int((started_correct & ~ended_correct).sum()),
+        "n_final_incorrect": int((~ended_correct).sum()),
         "corr_drift_vs_became_incorrect": float(
-            np.corrcoef(delta, (seq_df.groupby("input_id")["correct"].last()
-                                 & ~seq_df.groupby("input_id")["correct"].first()))[0, 1]
+            np.corrcoef(delta, (started_correct & ~ended_correct).astype(int))[0, 1]
+        ),
+        "corr_drift_vs_final_incorrect": float(
+            np.corrcoef(delta, (~ended_correct).astype(int))[0, 1]
         ),
     }
 

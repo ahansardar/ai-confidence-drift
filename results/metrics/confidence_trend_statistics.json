@@ -6,5 +6,8 @@
   "pct_documents_confidence_decreased": 0.7198177676537585,
   "pct_documents_confidence_increased": 0.2733485193621868,
   "pct_documents_confidence_unchanged": 0.00683371298405467,
-  "corr_drift_vs_became_incorrect": 0.042773039834583304
+  "n_became_incorrect": 25,
+  "n_final_incorrect": 95,
+  "corr_drift_vs_became_incorrect": 0.08977811046885527,
+  "corr_drift_vs_final_incorrect": 0.26621953498150824
 }
