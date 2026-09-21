@@ -32,7 +32,9 @@ def predict_sequences(base_model, documents):
     variants, metadata = [], []
     labeled = "label" in documents.columns
     for row in documents.itertuples():
-        seed = stable_seed(row.input_id)
+        # The probes must depend on the document, not on a caller-assigned ID.
+        # This also makes repeated scoring of the same text reproducible.
+        seed = stable_seed(row.text)
         for step, level in enumerate(CORRUPTION_LEVELS):
             variants.append(corrupt_text(row.text, level, seed + step))
             metadata.append((row.input_id, int(row.label) if labeled else None, step, level))
@@ -94,11 +96,31 @@ def document_features(sequence_features, documents):
 
 def score_documents(base_model, detector_bundle, documents):
     """Score new input_id/text rows without using or requiring true labels."""
+    if not isinstance(documents, pd.DataFrame):
+        raise TypeError("documents must be a pandas DataFrame")
+    if not {"input_id", "text"}.issubset(documents.columns):
+        raise ValueError("documents must contain input_id and text columns")
+    if not documents.columns.is_unique:
+        raise ValueError("documents must not contain duplicate column names")
+    if documents.empty:
+        raise ValueError("documents must contain at least one row")
     unlabeled = documents[["input_id", "text"]].copy()
+    if not unlabeled.input_id.map(lambda value: isinstance(value, str) and bool(value.strip())).all():
+        raise ValueError("every input_id must be a nonempty string")
+    if not unlabeled.input_id.is_unique:
+        raise ValueError("input_id values must be unique")
+    if not unlabeled.text.map(lambda value: isinstance(value, str) and bool(value.strip())).all():
+        raise ValueError("every text must be a nonempty string")
+    if list(base_model.classes_) != [0, 1]:
+        raise ValueError("base model must predict binary classes [0, 1]")
+    if detector_bundle.get("required_corruption_levels") != CORRUPTION_LEVELS:
+        raise ValueError("detector bundle requires a different probe schedule")
+    if detector_bundle.get("probe_seed_method") != "sha256_text":
+        raise ValueError("detector bundle requires a different probe seed method")
     sequences = predict_sequences(base_model, unlabeled)
     features = build_features(sequences)
     values, _, high_confidence = document_features(features, unlabeled)
-    risks = detector_bundle["model"].predict_proba(
+    scores = detector_bundle["model"].predict_proba(
         values[detector_bundle["features"]]
     )[:, 1]
     initial = sequences[sequences.step == 0].set_index("input_id").loc[values.index]
@@ -106,8 +128,8 @@ def score_documents(base_model, detector_bundle, documents):
         "input_id": values.index,
         "predicted_class": initial.predicted_class.to_numpy(),
         "confidence": initial.confidence.to_numpy(),
-        "original_error_risk": risks,
-        "flagged": high_confidence & (risks >= detector_bundle["threshold"]),
+        "original_error_score": scores,
+        "flagged": high_confidence & (scores >= detector_bundle["threshold"]),
     }).reset_index(drop=True)
     return result.set_index("input_id").loc[unlabeled.input_id].reset_index()
 
@@ -128,7 +150,9 @@ def training_threshold(features, target, high_confidence, n_splits=5):
         scores[predict_idx] = model.predict_proba(features.iloc[predict_idx])[:, 1]
     high_confidence_errors = high_confidence & target.astype(bool)
     if not high_confidence_errors.any():
-        return 0.0, scores
+        # With no high-confidence training errors there is no evidence for a
+        # high-recall threshold. Never silently route every case to review.
+        return 1.0, scores
     # Sparse positives make the least-risky observed error important. The
     # margin favors recall while keeping the threshold based on training data.
     return float(THRESHOLD_MARGIN * scores[high_confidence_errors].min()), scores
@@ -194,12 +218,18 @@ def main():
         "model": model, "features": list(x_train.columns),
         "threshold": threshold, "high_confidence_threshold": HIGH_CONFIDENCE_THRESHOLD,
         "required_corruption_levels": CORRUPTION_LEVELS,
+        "probe_seed_method": "sha256_text",
+        "score_calibrated": False,
         "target": "original step-0 prediction incorrect after six probes",
     }
     joblib.dump(bundle, MODELS / "sequence_error_detector.joblib")
     joblib.dump(bundle, MODELS / "drift_detector_best.joblib")
 
-    test_features = pd.read_csv(DATA_PROCESSED / "confidence_features.csv")
+    # Recreate the test probes with the same content-derived seed used in
+    # training and live scoring. The historical per-step experiment keeps its
+    # own ID-seeded sequences in confidence_features.csv.
+    base_model = joblib.load(MODELS / "baseline_model.joblib")
+    test_features = build_features(predict_sequences(base_model, test_docs))
     x_test, y_test, high_test = document_features(test_features, test_docs)
     scores = model.predict_proba(x_test[x_train.columns])[:, 1]
     test_metrics = high_confidence_metrics(y_test, high_test, scores, threshold)
@@ -216,7 +246,7 @@ def main():
     nested = nested_training_validation(train_docs)
     result = {
         "method": "OOF base-model sequences on training documents; six probes per document; Logistic Regression predicts original-step error",
-        "threshold_method": "75% of the lowest high-confidence-error risk in five meta-model training folds; zero if none observed",
+        "threshold_method": "75% of the lowest high-confidence-error score in five meta-model training folds; no alerts if none observed",
         "threshold": threshold,
         "training_high_confidence_errors": int((high_train & y_train.astype(bool)).sum()),
         "training_at_threshold": high_confidence_metrics(y_train, high_train, training_scores, threshold),

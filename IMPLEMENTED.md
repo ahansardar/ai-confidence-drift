@@ -61,8 +61,11 @@ Done. `src/error_analysis.py` and report §15 show that 6/100 (6.0%) of
 high-confidence (≥0.75) predictions were incorrect. The detector's five-fold
 out-of-fold check caught 0/6 at the uncorrupted step. This failure is
 reported in `results/metrics/high_confidence_detector_analysis.json`. A
-new sequence-level detector flags 6/6 after six probes, with 50 correct
+text-stable sequence-level detector flags 5/6 after six probes, with 44 correct
 predictions flagged (`results/metrics/sequence_error_detector_analysis.json`).
+Nested validation flags 4/6 and 108 correct predictions. The earlier nested
+6/6 count used a zero-threshold fallback in one fold, which flagged every
+high-confidence prediction there and overstated detector recall.
 It predicts original-step correctness from a completed confidence sequence.
 The separate immediate review policy also covers 6/6 but routes 78 correct
 predictions (`results/metrics/high_confidence_review_analysis.json`).
@@ -99,6 +102,8 @@ day-by-day timeline. The underlying deliverables are listed below.
 | GitHub repository | Done | this repo (public) |
 | Dataset / dataset source | Done | `data/processed/` + `sklearn.datasets.fetch_20newsgroups` |
 | Trained ML model | Done | `models/baseline_model.joblib`, primary `models/drift_detector_best.joblib`, research baseline `models/drift_detector_per_step.joblib` |
+| Unlabeled detector scoring | Done | `src/score_detector.py`, `src/sequence_error_detector.py` |
+| Frozen-model labeled evaluation | Done | `src/evaluate_detector.py` |
 | High-confidence review policy | Done | `models/high_confidence_review_policy.json`, `src/high_confidence_review.py` |
 | Feature-engineering methodology | Done | `src/feature_engineering.py`, report §10 |
 | Experimental results | Done | `results/metrics/` |
@@ -126,9 +131,13 @@ verifiable artifacts in this repo as itemized above.
 - Weak and unsuccessful findings are documented: drift-history improvement is
   modest and holdout performance varies. The per-step detector caught none
   of the six high-confidence errors at step 0. The sequence-level detector
-  flags all six only after six probes and flags 50 correct cases too.
+  flags five of six after six probes and flags 44 correct cases too.
 
 ## Remaining / open items
+- The saved detector has a validated unlabeled scoring CLI and a frozen-model
+  evaluator for a new labeled corpus. Deployment readiness is unproven: collect
+  independent data, set recall and review-capacity targets, and reduce false
+  alerts before using its flags for operational decisions.
 - Further research: repeat the pipeline on another dataset or base model to
-  test generalization. Reduce the sequence-level detector's false alarms and
-  establish whether it works on naturally repeated predictions.
+  test generalization and establish whether it works on naturally repeated
+  predictions.

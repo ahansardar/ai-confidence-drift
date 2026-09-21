@@ -53,7 +53,9 @@ src/
   high_confidence_review.py  8. training-only review policy
   drift_detector.py          9. Experiments A/B/C, per-step detector
   sequence_error_detector.py 10. original-error detection after six probes
-  visualize.py              11. report figures
+  score_detector.py          unlabeled scoring CLI
+  evaluate_detector.py       frozen-model evaluation CLI
+  visualize.py               11. report figures
   run_pipeline.py            runs all of the above in order
 data/processed/              generated datasets (committed, reproducible)
 models/                      trained models and review policy
@@ -94,16 +96,41 @@ with `python -m unittest discover -s tests -v`.
 - Net drift correlates 0.090 with a correct prediction becoming incorrect and
   0.266 with any incorrect final prediction. The original per-step detector
   caught none of the six high-confidence errors at step 0, when no history
-  exists. The new sequence-level detector flagged 6/6 after six probes and
-  flagged 50 correct predictions among the 100 high-confidence cases. Its
-  start-only ablation flagged 5/6 with 43 false alarms. The separate immediate
-  review policy also covers 6/6, but sends 78 correct predictions to review.
+  exists. The text-stable sequence-level detector flagged 5/6 after six
+  probes and flagged 44 correct predictions among the 100 high-confidence
+  cases. Nested validation caught 4/6 and flagged 108 correct predictions.
+  Its start-only ablation flagged 5/6 with 43 false alarms. The separate
+  immediate review policy covers 6/6, but sends 78 correct predictions to
+  review. The sequence detector is ready to run and evaluate, but its alert
+  quality is not established for deployment.
 
 `score_documents` in `src/sequence_error_detector.py` accepts a dataframe
-with `input_id` and `text` and returns the
-original prediction, confidence, error-risk score, and review flag. The saved
+with unique `input_id` values and nonempty `text`, and returns the
+original prediction, confidence, error score, and review flag. The score is
+useful for ranking but is **not a calibrated probability of error**. The saved
 bundle is `models/drift_detector_best.joblib` (also saved as
 `models/sequence_error_detector.joblib`). The earlier per-step model is kept
 as `models/drift_detector_per_step.joblib` for the A/B/C experiment. The
 primary detector runs six perturbed
 inferences per document before returning a flag, so it is not a step-0 alert.
+
+Score a new document from the command line:
+
+```bash
+python src/score_detector.py --text "A document to classify"
+python src/score_detector.py --input new_documents.jsonl --output scores.jsonl
+```
+
+Each JSONL input row needs an `input_id` and `text`, for example
+`{"input_id":"case-001","text":"..."}`. CSV input with those columns also
+works. The output includes `original_error_score` and `flagged`. Probes are
+seeded from the text, so changing the caller's ID cannot change its score.
+The CLI rejects duplicate IDs and empty text. Only load the repository's
+trusted model files, because joblib files execute code when loaded.
+
+For a newly collected, independently labeled corpus using the same class
+mapping (`0 = alt.atheism`, `1 = soc.religion.christian`), run
+`python src/evaluate_detector.py --input new_labeled.csv`. It reports error
+recall, false alerts, and any text overlap with the development corpus.
+The current evaluation is retrospective; deploy the alert policy only after
+it meets a review-capacity and recall target on genuinely new data.

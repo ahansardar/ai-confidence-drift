@@ -14,7 +14,7 @@ from confidence_analysis import trend_statistics
 from drift_detector import EXPERIMENTS, add_training_only_class_accuracy
 from feature_engineering import build_features
 from high_confidence_review import policy_from_predictions, review_flags, evaluate_flags
-from sequence_error_detector import score_documents
+from sequence_error_detector import score_documents, training_threshold
 from config import DATA_PROCESSED, MODELS
 
 
@@ -93,8 +93,36 @@ class MethodologyTests(unittest.TestCase):
         scored = score_documents(base, detector, documents[["input_id", "text"]])
         self.assertEqual(len(scored), 3)
         self.assertEqual(scored["input_id"].tolist(), documents["input_id"].tolist())
-        self.assertTrue(scored["original_error_risk"].between(0, 1).all())
+        self.assertTrue(scored["original_error_score"].between(0, 1).all())
         self.assertEqual(scored["flagged"].dtype, bool)
+
+    def test_sequence_detector_score_does_not_depend_on_caller_id(self):
+        base = joblib.load(MODELS / "baseline_model.joblib")
+        detector = joblib.load(MODELS / "drift_detector_best.joblib")
+        text = pd.read_csv(DATA_PROCESSED / "test.csv").iloc[0].text
+        documents = pd.DataFrame({"input_id": ["first", "second"], "text": [text, text]})
+        scored = score_documents(base, detector, documents)
+        self.assertAlmostEqual(scored.iloc[0].original_error_score, scored.iloc[1].original_error_score)
+        self.assertEqual(scored.iloc[0].flagged, scored.iloc[1].flagged)
+
+    def test_sequence_detector_rejects_ambiguous_or_empty_input(self):
+        base = joblib.load(MODELS / "baseline_model.joblib")
+        detector = joblib.load(MODELS / "drift_detector_best.joblib")
+        for documents in (
+            pd.DataFrame({"input_id": ["same", "same"], "text": ["one", "two"]}),
+            pd.DataFrame({"input_id": ["one"], "text": [" "]}),
+            pd.DataFrame({"input_id": ["one"], "body": ["a text"]}),
+        ):
+            with self.subTest(documents=documents.columns.tolist()):
+                with self.assertRaises(ValueError):
+                    score_documents(base, detector, documents)
+
+    def test_detector_without_high_confidence_training_errors_does_not_flag_everything(self):
+        features = pd.DataFrame({"value": np.arange(12, dtype=float)})
+        target = np.array([0, 1] * 6)
+        high_confidence = np.zeros(12, dtype=bool)
+        threshold, _ = training_threshold(features, target, high_confidence, n_splits=3)
+        self.assertEqual(threshold, 1.0)
 
 
 if __name__ == "__main__":

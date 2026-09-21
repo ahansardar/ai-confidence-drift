@@ -1,7 +1,7 @@
 {
   "method": "OOF base-model sequences on training documents; six probes per document; Logistic Regression predicts original-step error",
-  "threshold_method": "75% of the lowest high-confidence-error risk in five meta-model training folds; zero if none observed",
-  "threshold": 0.04327614915597475,
+  "threshold_method": "75% of the lowest high-confidence-error score in five meta-model training folds; no alerts if none observed",
+  "threshold": 0.05147290536316919,
   "training_high_confidence_errors": 6,
   "training_at_threshold": {
     "n_high_confidence_predictions": 248,
@@ -11,42 +11,42 @@
     "n_total_flagged": 146,
     "error_recall": 1.0,
     "alert_precision": 0.0410958904109589,
-    "roc_auc": 0.7692837465564738
+    "roc_auc": 0.7761707988980717
   },
   "nested_training_validation": {
     "method": "five outer folds; base and detector models and threshold trained without each outer validation document",
     "totals": {
       "n_high_confidence_predictions": 248,
       "n_high_confidence_errors": 6,
-      "n_errors_caught": 6,
-      "n_correct_flagged": 171,
-      "n_total_flagged": 177
+      "n_errors_caught": 4,
+      "n_correct_flagged": 108,
+      "n_total_flagged": 112
     },
     "folds": [
       {
-        "threshold": 0.017721939503806218,
+        "threshold": 0.023717303885291564,
         "n_high_confidence_predictions": 48,
         "n_high_confidence_errors": 3,
         "n_errors_caught": 3,
-        "n_correct_flagged": 25,
-        "n_total_flagged": 28,
+        "n_correct_flagged": 22,
+        "n_total_flagged": 25,
         "error_recall": 1.0,
-        "alert_precision": 0.10714285714285714,
-        "roc_auc": 0.9481481481481482
+        "alert_precision": 0.12,
+        "roc_auc": 0.9407407407407408
       },
       {
-        "threshold": 0.02130711911090892,
+        "threshold": 0.020316039532666638,
         "n_high_confidence_predictions": 52,
         "n_high_confidence_errors": 0,
         "n_errors_caught": 0,
-        "n_correct_flagged": 38,
-        "n_total_flagged": 38,
+        "n_correct_flagged": 35,
+        "n_total_flagged": 35,
         "error_recall": null,
         "alert_precision": 0.0,
         "roc_auc": null
       },
       {
-        "threshold": 0.03925890414887051,
+        "threshold": 0.04457220704514653,
         "n_high_confidence_predictions": 55,
         "n_high_confidence_errors": 1,
         "n_errors_caught": 1,
@@ -54,21 +54,21 @@
         "n_total_flagged": 28,
         "error_recall": 1.0,
         "alert_precision": 0.03571428571428571,
-        "roc_auc": 0.7037037037037037
+        "roc_auc": 0.7777777777777778
       },
       {
-        "threshold": 0.0,
+        "threshold": 1.0,
         "n_high_confidence_predictions": 59,
         "n_high_confidence_errors": 2,
-        "n_errors_caught": 2,
-        "n_correct_flagged": 57,
-        "n_total_flagged": 59,
-        "error_recall": 1.0,
-        "alert_precision": 0.03389830508474576,
-        "roc_auc": 0.6491228070175439
+        "n_errors_caught": 0,
+        "n_correct_flagged": 0,
+        "n_total_flagged": 0,
+        "error_recall": 0.0,
+        "alert_precision": null,
+        "roc_auc": 0.6578947368421053
       },
       {
-        "threshold": 0.032560136790687304,
+        "threshold": 0.035646367619285316,
         "n_high_confidence_predictions": 34,
         "n_high_confidence_errors": 0,
         "n_errors_caught": 0,
@@ -83,14 +83,14 @@
   "base_test_set_evaluation": {
     "n_high_confidence_predictions": 100,
     "n_high_confidence_errors": 6,
-    "n_errors_caught": 6,
-    "n_correct_flagged": 50,
-    "n_total_flagged": 56,
-    "error_recall": 1.0,
-    "alert_precision": 0.10714285714285714,
-    "roc_auc": 0.7943262411347518,
-    "all_document_roc_auc": 0.7788344388791121,
-    "all_document_f1_at_0_5": 0.4661016949152542
+    "n_errors_caught": 5,
+    "n_correct_flagged": 44,
+    "n_total_flagged": 49,
+    "error_recall": 0.8333333333333334,
+    "alert_precision": 0.10204081632653061,
+    "roc_auc": 0.8191489361702129,
+    "all_document_roc_auc": 0.7900703939352918,
+    "all_document_f1_at_0_5": 0.48717948717948717
   },
   "start_only_ablation": {
     "n_high_confidence_predictions": 100,
