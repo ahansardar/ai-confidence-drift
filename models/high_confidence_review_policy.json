@@ -1,0 +1,13 @@
+{
+  "high_confidence_threshold": 0.75,
+  "review_predicted_classes": [
+    1
+  ],
+  "selection_rule": "review classes with high-confidence out-of-fold errors; if none observed, review all predicted classes",
+  "n_training_high_confidence": 248,
+  "n_training_high_confidence_errors": 6,
+  "errors_by_predicted_class": {
+    "0": 0,
+    "1": 6
+  }
+}

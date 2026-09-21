@@ -14,7 +14,7 @@ I trained a simple text classifier (TF-IDF + Logistic Regression) on a public tw
 
 The results were mixed. On the 439 documents, net confidence change had a correlation of 0.090 with a correct prediction becoming incorrect. In five-fold document-grouped evaluation, adding confidence at the current step raised unreliable-prediction F1 from 0.296 to 0.468. Adding the nine history features raised it further to 0.508; ROC-AUC rose from 0.729 to 0.763 over the current-confidence model. The gain from history was modest but positive in this experiment. The base model's expected calibration error was 0.153 and its binary Brier score was 0.160. Six of 100 high-confidence predictions were wrong.
 
-The detector did not flag any of those six high-confidence errors in the out-of-fold evaluation. It should not be used to screen that particular failure mode without more work.
+The drift detector did not flag any of those six high-confidence errors in the out-of-fold evaluation. A separate, training-derived review policy routed all six to human review, but it also routed 78 correct high-confidence predictions. This provides coverage in this dataset at a substantial review cost; it does not make the detector accurate on these cases.
 
 ## 2. Introduction
 
@@ -85,6 +85,8 @@ I trained a second classifier to predict `unreliable` (1 for an incorrect predic
 ### 8.5 Train/test split
 
 I split the data at the document level using `GroupShuffleSplit` (75/25), so that different corruption steps from the same document never appear in both training and test data. I used that holdout split for model details and a separate five-fold `GroupKFold` evaluation for the main A/B/C comparison. Each row receives one out-of-fold prediction. The saved model's algorithm was selected using three grouped folds inside the training portion of the holdout split; the holdout labels did not choose it.
+
+For the high-confidence review policy, I made five-fold out-of-fold predictions on the *base classifier's 1,315 training documents*. A predicted class enters the review rule if it produced at least one high-confidence error there. If no such error is observed in a policy-selection set, the conservative fallback reviews all high-confidence predicted classes. I checked this rule with nested cross-validation on those training documents and then applied the fitted rule to the separate 439-document base-model test set. The follow-up policy was designed after the detector failure was observed, so the test-set result is a retrospective check, not independent prospective confirmation.
 
 ## 9. ML Model
 
@@ -178,7 +180,7 @@ Removing the moving-statistics group from C lowered holdout ROC-AUC from 0.764 t
 - Confidence is informative on average (section 11), but it's not perfectly calibrated (section 12).
 - Net drift alone correlates 0.090 with a correct prediction becoming wrong. It correlates 0.266 with a wrong prediction at the final step, a broader outcome.
 - With context and current confidence held constant, nine history features improved pooled out-of-fold F1 from 0.468 to 0.508. The fixed holdout gain was smaller, from 0.447 to 0.457.
-- Six of 100 high-confidence predictions were wrong, accounting for 7.2% of the uncorrupted base model's errors. The detector missed all six in the out-of-fold check.
+- Six of 100 high-confidence predictions were wrong, accounting for 7.2% of the uncorrupted base model's errors. The drift detector missed all six in the out-of-fold check. The separate review policy routed all six and 78 correct predictions to review.
 
 ## 15. Error Analysis
 
@@ -198,13 +200,15 @@ Removing the moving-statistics group from C lowered holdout ROC-AUC from 0.764 t
 - Interestingly, all 6 high confidence errors went the same direction: the true label was `alt.atheism` but the model predicted `soc.religion.christian`. My guess is that this happens because a lot of atheism related posts quote or reference Christian scripture and terminology while arguing against it, and a TF-IDF plus bigram model can't really tell the difference between someone quoting scripture to argue against it and someone writing as a believer. This is a reasonable explanation based on what I can see in the data, but I haven't proven it's the actual cause.
 - I tested detection directly. Across five document-grouped folds, every uncorrupted prediction received an out-of-fold C-model result. Among the 100 high-confidence predictions, six were wrong; the detector flagged none of those six and raised no false alarms in this subset at its 0.5 threshold (`results/metrics/high_confidence_detector_analysis.json`). At step 0, history features have not yet accumulated. These six cases are too few for a precise recall estimate, but the observed miss is a clear failure for the motivating use case.
 
+I added a **separate review policy** for this failure mode. Five-fold out-of-fold base-model predictions on the 1,315 *training* documents showed six high-confidence errors, all predicted as class 1. The saved policy therefore routes predictions at 75% confidence or higher in that predicted class to human review. No label from the 439-document base-model test set chooses the class or threshold. Applying the policy to those test predictions routed all six errors, but also 78 correct predictions: 84 reviews among 100 high-confidence cases and only 7.1% precision in the review queue. A nested five-outer/three-inner-fold check on the training corpus routed all six observed high-confidence errors and 225 correct predictions; when an inner fold observes no high-confidence errors, the policy conservatively reviews all predicted classes. The rule is intentionally broad. It does not predict which individual reviews are wrong, and this follow-up was designed after inspecting the test-set failure. It needs confirmation on a new corpus before deployment. The saved rule and full counts are in `models/high_confidence_review_policy.json` and `results/metrics/high_confidence_review_analysis.json`.
+
 ## 16. Limitations
 
 - **The sequences are simulated, not naturally repeated.** I generated confidence drift by corrupting the same document repeatedly, not by collecting genuinely independent repeated queries. I did this on purpose so that every confidence value would be real, but it doesn't capture other real world sources of drift, like the model being updated over time or the input distribution shifting.
 - **The dataset is fairly small.** 439 test documents (2,634 total sequence rows) isn't huge, and some of my bins, like the 0.9 to 1.0 calibration bin with only 10 samples, are too small to draw strong conclusions from on their own.
 - **Only two classes.** I don't know if these results carry over to multi class problems.
 - **Only one type of base model.** I only tested TF-IDF plus Logistic Regression. Other model types, especially deep neural networks, tend to be overconfident in different ways, so the calibration story could look different there.
-- **The detector's performance is still modest.** Pooled out-of-fold F1 was 0.508 for C, and the separate holdout F1 was 0.457 for Logistic Regression. The model missed all six high-confidence errors at the uncorrupted step.
+- **The detector's performance is still modest.** Pooled out-of-fold F1 was 0.508 for C, and the separate holdout F1 was 0.457 for Logistic Regression. The model missed all six high-confidence errors at the uncorrupted step. The separate review policy covers them in this dataset but sends 78 correct predictions for review.
 - **The document level split reduces training data for the detector on purpose.** I used 1,974 rows from 329 documents rather than all 2,634 rows, to avoid leaking information across the split. This is the correct thing to do, but it does mean the detector has less to learn from.
 - **The evidence comes from one base model and one dataset.** The bootstrap intervals measure variation from sampling these documents with the fold models fixed. A new corpus or retrained base model could change the size or direction of the history-feature gain.
 
@@ -214,13 +218,13 @@ Removing the moving-statistics group from C lowered holdout ROC-AUC from 0.764 t
 - If I ever get access to genuinely repeated real world queries (the same input asked multiple times over time) instead of synthetic corruption, I'd like to try this on that kind of data.
 - Try calibration techniques like temperature scaling or Platt scaling on the base model, and check whether that changes how much value the drift features add.
 - Extend this to multi class classification, where confidence and margin features would be richer (for example, using entropy over the full probability distribution instead of just the top class).
-- Study a detector aimed specifically at step-0 high-confidence errors. The present drift features have no history at step 0, and the current model did not catch those six cases.
+- Study a detector aimed specifically at step-0 high-confidence errors. The present drift features have no history at step 0, and the review policy's false-alarm cost is high.
 
 ## 18. Conclusion
 
 Confidence generally tracked correctness in this dataset: accuracy rose from 63.5% in the 40-60% confidence bin to 93.3% in the 80-100% bin. Calibration was imperfect (ECE 0.153; binary Brier score 0.160), and six high-confidence predictions were wrong. Net confidence change had little association with a correct prediction becoming incorrect (r = 0.090), though its association with any incorrect final prediction was larger (r = 0.266).
 
-The matched experiments show that confidence history adds a modest signal beyond current confidence on these corrupted-text sequences. Five-fold pooled F1 rose from 0.468 to 0.508 and ROC-AUC from 0.729 to 0.763. The separate holdout gain was smaller. The detector missed all six high-confidence errors at the uncorrupted step, so it does not yet solve the most concerning error case. That is the practical boundary of this result.
+The matched experiments show that confidence history adds a modest signal beyond current confidence on these corrupted-text sequences. Five-fold pooled F1 rose from 0.468 to 0.508 and ROC-AUC from 0.729 to 0.763. The separate holdout gain was smaller. The detector missed all six high-confidence errors at the uncorrupted step. A separate, training-derived review rule routed those six errors and 78 correct predictions for review; it improves coverage at a high human cost and does not establish reliable selective detection. That is the practical boundary of this result.
 
 ## 19. References
 

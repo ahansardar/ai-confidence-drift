@@ -58,7 +58,11 @@ report §11; figure at `results/figures/confidence_vs_accuracy.png`.
 Done. `src/error_analysis.py` and report §15 show that 6/100 (6.0%) of
 high-confidence (≥0.75) predictions were incorrect. The detector's five-fold
 out-of-fold check caught 0/6 at the uncorrupted step. This failure is
-reported in `results/metrics/high_confidence_detector_analysis.json`.
+reported in `results/metrics/high_confidence_detector_analysis.json`. A
+separate training-derived review policy routed all 6/6 to review, along with
+78 correct predictions (`results/metrics/high_confidence_review_analysis.json`).
+It is a conservative safeguard with a high review cost, not an improved
+classification result.
 
 ## 11. Calibration analysis
 Done. ECE 0.153, corrected binary Brier score 0.160 and a reliability
@@ -90,6 +94,7 @@ day-by-day timeline. The underlying deliverables are listed below.
 | GitHub repository | Done | this repo (public) |
 | Dataset / dataset source | Done | `data/processed/` + `sklearn.datasets.fetch_20newsgroups` |
 | Trained ML model | Done | `models/baseline_model.joblib`, `models/drift_detector_best.joblib` |
+| High-confidence review policy | Done | `models/high_confidence_review_policy.json`, `src/high_confidence_review.py` |
 | Feature-engineering methodology | Done | `src/feature_engineering.py`, report §10 |
 | Experimental results | Done | `results/metrics/` |
 | Confidence analysis | Done | `results/metrics/confidence_vs_accuracy.csv`, `confidence_trend_statistics.json` |
@@ -115,8 +120,10 @@ verifiable artifacts in this repo as itemized above.
   `src/run_pipeline.py` and fixed random seeds.
 - Weak and unsuccessful findings are documented: drift-history improvement is
   modest, holdout performance varies, and the detector caught none of the
-  six high-confidence errors in the out-of-fold check.
+  six high-confidence errors. The separate review safeguard catches them in
+  this dataset at the cost of 78 false alarms.
 
 ## Remaining / open items
 - Further research: repeat the pipeline on another dataset or base model to
-  test generalization. Improve detection of high-confidence errors at step 0.
+  test generalization. Improve *selective* detection of high-confidence errors
+  at step 0 so fewer correct predictions require review.

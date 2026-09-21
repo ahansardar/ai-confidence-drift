@@ -12,6 +12,7 @@ from calibration import binary_brier_score
 from confidence_analysis import trend_statistics
 from drift_detector import EXPERIMENTS, add_training_only_class_accuracy
 from feature_engineering import build_features
+from high_confidence_review import policy_from_predictions, review_flags, evaluate_flags
 
 
 class MethodologyTests(unittest.TestCase):
@@ -61,6 +62,25 @@ class MethodologyTests(unittest.TestCase):
         self.assertTrue(c > b)
         self.assertEqual(len(c), 13)
         self.assertNotIn("historical_accuracy_for_class", c)
+
+    def test_high_confidence_review_uses_training_errors_and_ignores_test_labels(self):
+        policy = policy_from_predictions(
+            actual=[0, 1, 1, 0], predicted=[1, 1, 0, 0],
+            confidence=[0.9, 0.8, 0.55, 0.88],
+        )
+        self.assertEqual(policy["review_predicted_classes"], [1])
+        predicted = [1, 1, 0]
+        confidence = [0.96, 0.77, 0.99]
+        self.assertEqual(review_flags(predicted, confidence, policy).tolist(), [True, True, False])
+        first = evaluate_flags([0, 1, 0], predicted, confidence, policy)
+        second = evaluate_flags([1, 0, 1], predicted, confidence, policy)
+        self.assertEqual(first["n_total_routed_to_review"], second["n_total_routed_to_review"])
+
+    def test_review_policy_does_not_exempt_classes_when_training_has_no_errors(self):
+        policy = policy_from_predictions(
+            actual=[0, 1], predicted=[0, 1], confidence=[0.9, 0.9],
+        )
+        self.assertEqual(policy["review_predicted_classes"], [0, 1])
 
 
 if __name__ == "__main__":

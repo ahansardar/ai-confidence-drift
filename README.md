@@ -31,6 +31,9 @@ section-by-section status against the project brief.
    splits and five-fold grouped validation.
 5. Run calibration analysis (ECE, binary Brier score, reliability diagram)
    and check whether the detector actually catches high-confidence errors.
+6. Fit a separate conservative review policy using out-of-fold predictions on
+   the base-model training corpus. It routes high-confidence predictions in
+   error-prone predicted classes to human review.
 
 ## Project structure
 
@@ -44,11 +47,12 @@ src/
   confidence_analysis.py   5. confidence-vs-accuracy binning, trend stats
   calibration.py           6. ECE / Brier score / reliability diagram
   error_analysis.py        7. high-confidence-error analysis
-  drift_detector.py        8. Experiments A/B/C, drift-detector training
-  visualize.py              9. report figures
+  high_confidence_review.py 8. training-only review-policy selection and evaluation
+  drift_detector.py         9. Experiments A/B/C, drift-detector training
+  visualize.py             10. report figures
   run_pipeline.py          runs all of the above in order
 data/processed/            generated datasets (committed, reproducible)
-models/                    trained baseline model + drift detector (joblib)
+models/                    trained models (joblib) + high-confidence review policy (JSON)
 results/metrics/           every metric reported in the research report
   results/figures/           reliability diagram, drift trajectories, etc.
   reports/RESEARCH_REPORT.md full 18-section research report
@@ -84,5 +88,8 @@ with `python -m unittest discover -s tests -v`.
   history features raises it to 0.508; ROC-AUC moves from 0.729 to 0.763 for
   B versus C. The separate holdout gain is smaller (F1 0.447 to 0.457).
 - Net drift correlates 0.090 with a correct prediction becoming incorrect and
-  0.266 with any incorrect final prediction. The detector caught none of the
-  six high-confidence errors at the uncorrupted step in out-of-fold testing.
+  0.266 with any incorrect final prediction. The drift detector caught none
+  of the six high-confidence errors at the uncorrupted step. The separate
+  training-derived review policy routed all six to review, but also routed
+  78 correct predictions (84 reviews among 100 high-confidence cases). It is
+  a costly coverage safeguard, not an accurate error classifier.

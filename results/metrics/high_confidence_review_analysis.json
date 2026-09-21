@@ -1,0 +1,98 @@
+{
+  "purpose": "route high-confidence predictions to review; does not predict correctness",
+  "policy_source": "out-of-fold predictions on the 1,315 base-model training documents",
+  "policy": {
+    "high_confidence_threshold": 0.75,
+    "review_predicted_classes": [
+      1
+    ],
+    "selection_rule": "review classes with high-confidence out-of-fold errors; if none observed, review all predicted classes",
+    "n_training_high_confidence": 248,
+    "n_training_high_confidence_errors": 6,
+    "errors_by_predicted_class": {
+      "0": 0,
+      "1": 6
+    }
+  },
+  "nested_training_validation": {
+    "method": "five outer folds; class policy selected in three inner folds on outer-training documents only",
+    "n_high_confidence_predictions": 248,
+    "n_high_confidence_errors": 6,
+    "n_errors_routed_to_review": 6,
+    "n_correct_predictions_routed_to_review": 225,
+    "n_total_routed_to_review": 231,
+    "folds": [
+      {
+        "review_predicted_classes": [
+          1
+        ],
+        "n_high_confidence_predictions": 48,
+        "n_high_confidence_errors": 3,
+        "n_errors_routed_to_review": 3,
+        "n_correct_predictions_routed_to_review": 39,
+        "n_total_routed_to_review": 42,
+        "error_recall": 1.0,
+        "review_precision": 0.07142857142857142
+      },
+      {
+        "review_predicted_classes": [
+          1
+        ],
+        "n_high_confidence_predictions": 52,
+        "n_high_confidence_errors": 0,
+        "n_errors_routed_to_review": 0,
+        "n_correct_predictions_routed_to_review": 50,
+        "n_total_routed_to_review": 50,
+        "error_recall": null,
+        "review_precision": 0.0
+      },
+      {
+        "review_predicted_classes": [
+          1
+        ],
+        "n_high_confidence_predictions": 55,
+        "n_high_confidence_errors": 1,
+        "n_errors_routed_to_review": 1,
+        "n_correct_predictions_routed_to_review": 50,
+        "n_total_routed_to_review": 51,
+        "error_recall": 1.0,
+        "review_precision": 0.0196078431372549
+      },
+      {
+        "review_predicted_classes": [
+          0,
+          1
+        ],
+        "n_high_confidence_predictions": 59,
+        "n_high_confidence_errors": 2,
+        "n_errors_routed_to_review": 2,
+        "n_correct_predictions_routed_to_review": 57,
+        "n_total_routed_to_review": 59,
+        "error_recall": 1.0,
+        "review_precision": 0.03389830508474576
+      },
+      {
+        "review_predicted_classes": [
+          1
+        ],
+        "n_high_confidence_predictions": 34,
+        "n_high_confidence_errors": 0,
+        "n_errors_routed_to_review": 0,
+        "n_correct_predictions_routed_to_review": 29,
+        "n_total_routed_to_review": 29,
+        "error_recall": null,
+        "review_precision": 0.0
+      }
+    ]
+  },
+  "base_test_set_evaluation": {
+    "n_high_confidence_predictions": 100,
+    "n_high_confidence_errors": 6,
+    "n_errors_routed_to_review": 6,
+    "n_correct_predictions_routed_to_review": 78,
+    "n_total_routed_to_review": 84,
+    "error_recall": 1.0,
+    "review_precision": 0.07142857142857142
+  },
+  "evaluation_limit": "policy designed after inspecting this test set's detector failure; confirm on a new corpus before deployment"
+}
